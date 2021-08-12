@@ -593,10 +593,13 @@ process bustools_correct_sort{
       correct = ""
       sort_file = "${bus}/output.bus"
     }
+
+    sort_mem = task.memory.toGiga() - 0.1
+
     """
     $correct    
     mkdir -p tmp
-    bustools sort -T tmp/ -t ${task.cpus} -m ${task.memory.toGiga()}G -o ${bus}/output.corrected.sort.bus $sort_file
+    bustools sort -T tmp/ -t ${task.cpus} -m ${sort_mem}G -o ${bus}/output.corrected.sort.bus $sort_file
     """
 }
 
