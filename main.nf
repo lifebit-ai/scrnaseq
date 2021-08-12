@@ -9,6 +9,9 @@
 ----------------------------------------------------------------------------------------
 */
 
+// make main.nf compatible with NF v20.01.0
+projectDir = workflow.projectDir
+
 log.info Headers.nf_core(workflow, params.monochrome_logs)
 
 ////////////////////////////////////////////////////
