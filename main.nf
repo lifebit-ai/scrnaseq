@@ -295,9 +295,20 @@ process extract_transcriptome {
 
     when: !params.transcript_fasta && (params.aligner == 'alevin' || params.aligner == 'kallisto')
     script:
+
+    // igenomes GRCh38 has a gtf with alt chromosome reguions but a fasta without them
+    if (params.genome == 'GRCh38') {
+        clean_gtf = 'cleaned.gtf'
+        filter = "awk -F '\t' '\$1!~/.*_alt\$/{print \$0}' $gtf > ${clean_gtf}"
+    } else {
+        clean_gtf = gtf
+        filter = ""
+    }
+
     // -F to preserve all GTF attributes in the fasta ID
     """
-    gffread -F $gtf -w "${genome_fasta}.transcriptome.fa" -g $genome_fasta
+    $filter
+    gffread -F $clean_gtf -w "${genome_fasta}.transcriptome.fa" -g $genome_fasta
     """
 }
 
