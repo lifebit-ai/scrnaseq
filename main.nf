@@ -127,11 +127,11 @@ ch_output_docs_images = file("$projectDir/docs/images/", checkIfExists: true)
  */
 
  if(params.input_paths){
-         Channel
-             .from(params.input_paths)
-             .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-             .ifEmpty { exit 1, "params.input_paths was empty - no input files supplied" }
-             .into { read_files_alevin; read_files_star; read_files_kallisto}
+    Channel
+        .from(params.input_paths)
+        .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+        .ifEmpty { exit 1, "params.input_paths was empty - no input files supplied" }
+        .into { read_files_alevin; read_files_star; read_files_kallisto}
 } else if (!params.input_paths && "${params.input}".endsWith('.csv') ) {
     Channel
         .fromPath(params.input)
@@ -140,11 +140,11 @@ ch_output_docs_images = file("$projectDir/docs/images/", checkIfExists: true)
         .map { sample, reads1, reads2 -> [sample, [file(reads1), file(reads2)]] }
         .ifEmpty { exit 1, "Design file was empty - no input files supplied" }
         .into { read_files_alevin; read_files_star; read_files_kallisto }
-     } else {
-         Channel
-            .fromFilePairs( params.input )
-            .ifEmpty { exit 1, "Cannot find any reads matching: ${params.input}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\n" }
-            .into { read_files_alevin; read_files_star; read_files_kallisto }
+} else {
+    Channel
+        .fromFilePairs( params.input )
+        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.input}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\n" }
+        .into { read_files_alevin; read_files_star; read_files_kallisto }
 }
 
 //Whitelist files for STARsolo and Kallisto
@@ -613,7 +613,7 @@ process bustools_correct_sort{
       sort_file = "${bus}/output.bus"
     }
 
-    sort_mem = task.memory.toGiga() - 0.1
+    sort_mem = task.memory.toGiga() * 0.95
 
     """
     $correct    
