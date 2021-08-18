@@ -9,6 +9,9 @@
 ----------------------------------------------------------------------------------------
 */
 
+// make main.nf compatible with NF v20.01.0
+projectDir = workflow.projectDir
+
 log.info Headers.nf_core(workflow, params.monochrome_logs)
 
 ////////////////////////////////////////////////////
@@ -124,16 +127,24 @@ ch_output_docs_images = file("$projectDir/docs/images/", checkIfExists: true)
  */
 
  if(params.input_paths){
-         Channel
-             .from(params.input_paths)
-             .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-             .ifEmpty { exit 1, "params.input_paths was empty - no input files supplied" }
-             .into { read_files_alevin; read_files_star; read_files_kallisto}
-     } else {
-         Channel
-            .fromFilePairs( params.input )
-            .ifEmpty { exit 1, "Cannot find any reads matching: ${params.input}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\n" }
-            .into { read_files_alevin; read_files_star; read_files_kallisto }
+    Channel
+        .from(params.input_paths)
+        .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+        .ifEmpty { exit 1, "params.input_paths was empty - no input files supplied" }
+        .into { read_files_alevin; read_files_star; read_files_kallisto}
+} else if (!params.input_paths && "${params.input}".endsWith('.csv') ) {
+    Channel
+        .fromPath(params.input)
+        .ifEmpty { exit 1, "Cannot find input file : ${params.input}" }
+        .splitCsv()
+        .map { sample, reads1, reads2 -> [sample, [file(reads1), file(reads2)]] }
+        .ifEmpty { exit 1, "Design file was empty - no input files supplied" }
+        .into { read_files_alevin; read_files_star; read_files_kallisto }
+} else {
+    Channel
+        .fromFilePairs( params.input )
+        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.input}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\n" }
+        .into { read_files_alevin; read_files_star; read_files_kallisto }
 }
 
 //Whitelist files for STARsolo and Kallisto
@@ -284,9 +295,20 @@ process extract_transcriptome {
 
     when: !params.transcript_fasta && (params.aligner == 'alevin' || params.aligner == 'kallisto')
     script:
+
+    // igenomes GRCh38 has a gtf with alt chromosome reguions but a fasta without them
+    if (params.genome == 'GRCh38') {
+        clean_gtf = 'cleaned.gtf'
+        filter = "awk -F '\t' '\$1!~/.*_alt\$/{print \$0}' $gtf > ${clean_gtf}"
+    } else {
+        clean_gtf = gtf
+        filter = ""
+    }
+
     // -F to preserve all GTF attributes in the fasta ID
     """
-    gffread -F $gtf -w "${genome_fasta}.transcriptome.fa" -g $genome_fasta
+    $filter
+    gffread -F $clean_gtf -w "${genome_fasta}.transcriptome.fa" -g $genome_fasta
     """
 }
 
@@ -590,10 +612,13 @@ process bustools_correct_sort{
       correct = ""
       sort_file = "${bus}/output.bus"
     }
+
+    sort_mem = task.memory.toGiga() * 0.95
+
     """
     $correct    
     mkdir -p tmp
-    bustools sort -T tmp/ -t ${task.cpus} -m ${task.memory.toGiga()}G -o ${bus}/output.corrected.sort.bus $sort_file
+    bustools sort -T tmp/ -t ${task.cpus} -m ${sort_mem}G -o ${bus}/output.corrected.sort.bus $sort_file
     """
 }
 
