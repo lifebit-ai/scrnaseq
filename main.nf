@@ -793,17 +793,13 @@ workflow.onComplete {
     if (email_address) {
         try {
             if (params.plaintext_email) { throw GroovyException('Send plaintext e-mail, not HTML') }
-            // Try to send HTML e-mail using sendmail
-            [ 'sendmail', '-t' ].execute() << sendmail_html
-            log.info "[nf-core/scrnaseq] Sent summary e-mail to $email_address (sendmail)"
+            // Try to send HTML e-mail
+            sendMail(to: email_address, subject: subject, body: email_html)
+            log.info "[nf-core/scrnaseq] Sent summary e-mail to $email_address"
         } catch (all) {
             // Catch failures and try with plaintext
-            def mail_cmd = [ 'mail', '-s', subject, '--content-type=text/html', email_address ]
-            if ( mqc_report.size() <= params.max_multiqc_email_size.toBytes() ) {
-              mail_cmd += [ '-A', mqc_report ]
-            }
-            mail_cmd.execute() << email_html
-            log.info "[nf-core/scrnaseq] Sent summary e-mail to $email_address (mail)"
+            sendMail(to: email_address, subject: subject, body: email_txt)
+            log.info "[nf-core/scrnaseq] Sent summary e-mail to $email_address"
         }
     }
 
