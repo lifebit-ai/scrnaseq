@@ -285,7 +285,7 @@ if (params.sra) {
         set val(accession), file(output_filename) into (read_files_alevin, read_files_star, read_files_kallisto )
 
         script:
-        def ngc_cmd_with_key_file = params.sra_key ? "--ngc $key_file" : ''
+        ngc_cmd_with_key_file = params.sra_key ? "--ngc $key_file" : ''
         output_filename = "${accession}_{1,2}.fastq.gz"
         """
         prefetch $ngc_cmd_with_key_file $accession --progress -o $accession
