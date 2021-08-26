@@ -13,7 +13,7 @@ RUN mamba env create -f /environment.yml && conda clean -a
 RUN apt-get update && apt-get install -y libtbb2 pandoc-citeproc
 
 # Add conda installation dir to PATH (instead of doing 'conda activate')
-ENV PATH /opt/conda/envs/nf-core-scrnaseq-1.2.0/bin:$PATH
+ENV PATH /opt/conda/envs/lifebit-ai-scrnaseq-1.2.0/bin:$PATH
 
 # Dump the details of the installed packages to a file for posterity
-RUN conda env export --name nf-core-scrnaseq-1.2.0 > nf-core-scrnaseq-1.1.0.yml
+RUN conda env export --name lifebit-ai-scrnaseq-1.2.0 > lifebit-ai-scrnaseq-1.2.0.yml
