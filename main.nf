@@ -155,6 +155,10 @@ if(params.input_paths && !params.sra && !params.input){
         .into { read_files_alevin; read_files_star; read_files_kallisto }
 }
 
+
+// SRA key file
+sra_key = params.sra_key ? file(params.sra_key) : false
+
 //Whitelist files for STARsolo and Kallisto
 whitelist_folder = "$baseDir/assets/whitelist/"
 
@@ -271,19 +275,21 @@ process get_software_versions {
 if (params.sra) {
     process download_sra {
         tag "${accession}"
+        label 'low_memory'
 
         input:
         val(accession) from sra_ids
-        //each file(key_file) from ch_key_file
+        each file(key_file) from sra_key
 
         output:
         set val(accession), file(output_filename) into (read_files_alevin, read_files_star, read_files_kallisto )
+
         script:
-        //def ngc_cmd_with_key_file = key_file.name != 'no_key_file.txt' ? "--ngc ${key_file}" : ''
+        def ngc_cmd_with_key_file = params.sra_key ? "--ngc $key_file" : ''
         output_filename = "${accession}_{1,2}.fastq.gz"
         """
-        prefetch $accession --progress -o $accession
-        fasterq-dump $accession --threads ${task.cpus} --split-3
+        prefetch $ngc_cmd_with_key_file $accession --progress -o $accession
+        fasterq-dump $ngc_cmd_with_key_file $accession --threads ${task.cpus} --split-3
         pigz *.fastq
         """
     }
