@@ -23,6 +23,20 @@
                     "description": "Input FastQ files path in array format",
                     "fa_icon": "fas fa-dna"
                 },
+                "sra": {
+                    "type": "string",
+                    "fa_icon": "fas fa-dna",
+                    "description": "File listing SRA accessions to fetch and use as input.",
+                    "help_text": "File should be a newline delimited list of SRA run accessions. For fetching of accessions which are protected data '--sra_key' is additionally required."
+                },
+                "sra_key": {
+                    "type": "string",
+                    "fa_icon": "fas fa-key",
+                    "description": "Key file for accessing protected data on SRA.",
+                    "help_text": "For downloading protected data from SRA use TCGA authentication token (TCGA) or dbGAP repository key (GTEx, path).",
+                    "hidden": true,
+                    "default": "false"
+                },
                 "outdir": {
                     "type": "string",
                     "description": "The output directory where the results will be saved.",
@@ -196,6 +210,13 @@
                     "description": "Display help text.",
                     "hidden": true,
                     "fa_icon": "fas fa-question-circle"
+                },
+                "config": {
+                    "type": "string",
+                    "default": "conf/base.config",
+                    "description": "Specify config file.",
+                    "fa_icon": "fas fa-cog",
+                    "hidden": true
                 },
                 "publish_dir_mode": {
                     "type": "string",

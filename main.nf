@@ -126,13 +126,21 @@ ch_output_docs_images = file("$projectDir/docs/images/", checkIfExists: true)
  * Create a channel for input read files
  */
 
- if(params.input_paths){
+if(params.input_paths && !params.sra && !params.input){
     Channel
         .from(params.input_paths)
         .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
         .ifEmpty { exit 1, "params.input_paths was empty - no input files supplied" }
         .into { read_files_alevin; read_files_star; read_files_kallisto}
-} else if (!params.input_paths && "${params.input}".endsWith('.csv') ) {
+} else if (!params.input_paths && params.sra && !params.input) {
+    Channel
+        .fromPath(params.sra)
+        .ifEmpty { exit 1, "Cannot find CSV SRA file : ${params.sra}" }
+        .splitCsv()
+        .map { sample -> sample[0].trim() }
+        .ifEmpty { exit 1, "SRA file was empty - no input accessions supplied" }
+        .set { sra_ids }
+} else if (!params.input_paths && !params.sra && params.input && "${params.input}".endsWith('.csv') ) {
     Channel
         .fromPath(params.input)
         .ifEmpty { exit 1, "Cannot find input file : ${params.input}" }
@@ -140,12 +148,16 @@ ch_output_docs_images = file("$projectDir/docs/images/", checkIfExists: true)
         .map { sample, reads1, reads2 -> [sample, [file(reads1), file(reads2)]] }
         .ifEmpty { exit 1, "Design file was empty - no input files supplied" }
         .into { read_files_alevin; read_files_star; read_files_kallisto }
-} else {
+} else if (!params.input_paths && !params.sra && params.input ) {
     Channel
         .fromFilePairs( params.input )
         .ifEmpty { exit 1, "Cannot find any reads matching: ${params.input}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\n" }
         .into { read_files_alevin; read_files_star; read_files_kallisto }
 }
+
+
+// SRA key file
+sra_key = params.sra_key ? file(params.sra_key) : false
 
 //Whitelist files for STARsolo and Kallisto
 whitelist_folder = "$baseDir/assets/whitelist/"
@@ -256,6 +268,32 @@ process get_software_versions {
     """
 }
 
+/*
+* Preprocessing - Download SRA IDs and prepare fastqs if needed
+*/ 
+
+if (params.sra) {
+    process download_sra {
+        tag "${accession}"
+        label 'low_memory'
+
+        input:
+        val(accession) from sra_ids
+        each file(key_file) from sra_key
+
+        output:
+        set val(accession), file(output_filename) into (read_files_alevin, read_files_star, read_files_kallisto )
+
+        script:
+        ngc_cmd_with_key_file = params.sra_key ? "--ngc $key_file" : ''
+        output_filename = "${accession}_{1,2}.fastq.gz"
+        """
+        prefetch $ngc_cmd_with_key_file $accession --progress -o $accession
+        fasterq-dump $ngc_cmd_with_key_file $accession --threads ${task.cpus} --split-3
+        pigz *.fastq
+        """
+    }
+}
 /*
 * Preprocessing - Unzip 10X barcodes if they are supplied compressed
 */ 
